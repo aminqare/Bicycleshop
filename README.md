@@ -1,39 +1,34 @@
-# PedalPeak Bicycle Shop (Starter)
+# فروشگاه دوچرخه پدال
 
-A responsive online bicycle shop starter built with plain HTML, CSS, and JavaScript.
+نسخه فعلی یک فروشگاه آنلاین فارسی (RTL) با طراحی مینیمال و پنل مدیریت محصولات است.
 
-## Run locally
-
-From this folder:
+## اجرا
 
 ```bash
+cd /Users/aminqare/Documents/Codes/Bicycle
 python3 -m http.server 8080
 ```
 
-Then open `http://localhost:8080`.
+- فروشگاه: `http://localhost:8080/index.html`
+- پنل مدیریت: `http://localhost:8080/admin.html`
 
-## Features
+## امکانات فروشگاه
 
-- Hero landing section and brand navigation
-- Catalog auto-loaded from `product_data.json`
-- Real product images loaded from `downloaded_images/*.jpg`
-- Bicycle filtering with search, category filter, and price slider
-- Non-bike products section (scooters, ride-ons, etc.)
-- Cart drawer with quantity controls and localStorage persistence
-- Checkout form with simple validation
-- Mobile responsive layout
+- رابط فارسی و راست‌چین
+- نمایش محصولات از `product_data.json` و `downloaded_images`
+- فیلتر دوچرخه بر اساس دسته‌بندی، قیمت و جستجو
+- سبد خرید با ذخیره در `localStorage`
+- فرم ثبت سفارش ساده
 
-## Customize
+## امکانات پنل مدیریت
 
-- Product titles/images: `product_data.json` + `downloaded_images/`
-- Colors and visual style: `styles.css` (`:root` CSS variables)
-- Business details, text, and sections: `index.html`
+- مشاهده و جستجوی همه محصولات
+- ویرایش عنوان، قیمت، نوع، دسته‌بندی، توضیح و عکس
+- تغییر عکس با آدرس فایل/URL یا آپلود فایل از سیستم
+- افزودن محصول جدید
+- حذف محصول
+- بازگردانی کامل داده‌ها به حالت اولیه (`product_data.json`)
 
-## Notes
+## نکته فنی
 
-This is a frontend starter. For a production shop, add:
-
-- Backend APIs (orders, products, inventory)
-- Payment gateway integration
-- Authentication and admin dashboard
-- Server-side validation and security controls
+این پروژه فرانت‌اند است. تغییرات پنل مدیریت در `localStorage` مرورگر ذخیره می‌شوند و برای محیط واقعی نیاز به بک‌اند و دیتابیس دارید.

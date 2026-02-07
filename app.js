@@ -1,7 +1,8 @@
 const cartKey = "pedalpeak-cart-v1";
 
+let catalog = [];
 let bikes = [];
-let accessories = [];
+let otherProducts = [];
 let productIndex = new Map();
 let cart = loadCart();
 
@@ -27,14 +28,13 @@ overlay.addEventListener("click", closeCart);
 
 categoryFilter.addEventListener("change", renderCatalog);
 priceFilter.addEventListener("input", () => {
-  priceValue.textContent = `$${priceFilter.value}`;
+  priceValue.textContent = formatMoney(Number(priceFilter.value));
   renderCatalog();
 });
 searchInput.addEventListener("input", renderCatalog);
 
-productGrid.addEventListener("click", handleAddButtonClick);
-accessoryGrid.addEventListener("click", handleAddButtonClick);
-
+productGrid.addEventListener("click", handleAddClick);
+accessoryGrid.addEventListener("click", handleAddClick);
 checkoutForm.addEventListener("submit", submitCheckout);
 
 year.textContent = String(new Date().getFullYear());
@@ -42,73 +42,30 @@ renderCart();
 bootstrap();
 
 async function bootstrap() {
-  productGrid.innerHTML = '<p class="hidden-message">Loading bikes...</p>';
-  accessoryGrid.innerHTML = '<p class="hidden-message">Loading products...</p>';
+  productGrid.innerHTML = '<p class="hidden-message">در حال بارگذاری محصولات...</p>';
 
-  try {
-    const catalog = await loadCatalog();
-    bikes = catalog.bikes;
-    accessories = catalog.accessories;
-    productIndex = new Map(catalog.all.map((item) => [item.id, item]));
+  catalog = await window.CatalogStore.loadCatalog();
+  bikes = catalog.filter((item) => item.itemType === "bicycle");
+  otherProducts = catalog.filter((item) => item.itemType !== "bicycle");
+  productIndex = new Map(catalog.map((item) => [item.id, item]));
 
-    syncPriceRange();
-    reconcileCart();
-    renderCatalog();
-    renderCart();
-  } catch (error) {
-    const message =
-      "Could not load product data. Make sure product_data.json is available and run with a local server.";
-    productGrid.innerHTML = `<p class="hidden-message">${message}</p>`;
-    accessoryGrid.innerHTML = "";
-    console.error(error);
-  }
-}
-
-async function loadCatalog() {
-  const response = await fetch("product_data.json", { cache: "no-store" });
-  if (!response.ok) {
-    throw new Error(`Failed to load product_data.json (${response.status})`);
-  }
-
-  const rawData = await response.json();
-  const entries = Object.entries(rawData).sort(
-    ([fileA], [fileB]) => extractNumber(fileA) - extractNumber(fileB)
-  );
-
-  const all = entries.map(([fileName, title], index) => {
-    const seed = extractNumber(fileName) || index + 1;
-    const normalizedTitle = cleanTitle(title);
-    const size = parseSize(normalizedTitle);
-    const itemType = detectItemType(normalizedTitle);
-    const bikeCategory = itemType === "bicycle" ? detectBikeCategory(normalizedTitle, size) : null;
-
-    return {
-      id: `p-${seed}`,
-      sku: fileName,
-      name: normalizedTitle,
-      description: buildDescription(itemType, size),
-      itemType,
-      category: bikeCategory,
-      tag: buildTag(itemType, bikeCategory, size),
-      image: `downloaded_images/${fileName}`,
-      price: estimatePrice(itemType, bikeCategory, size, seed),
-      searchText: normalizedTitle.toLowerCase(),
-    };
-  });
-
-  return {
-    all,
-    bikes: all.filter((item) => item.itemType === "bicycle"),
-    accessories: all.filter((item) => item.itemType !== "bicycle"),
-  };
+  syncPriceRange();
+  reconcileCart();
+  renderCatalog();
+  renderCart();
 }
 
 function renderCatalog() {
   renderBikes();
-  renderAccessories();
+  renderOtherProducts();
 }
 
 function renderBikes() {
+  if (bikes.length === 0) {
+    productGrid.innerHTML = '<p class="hidden-message">محصولی برای نمایش وجود ندارد.</p>';
+    return;
+  }
+
   const category = categoryFilter.value;
   const maxPrice = Number(priceFilter.value);
   const query = searchInput.value.trim().toLowerCase();
@@ -121,19 +78,24 @@ function renderBikes() {
   });
 
   if (filtered.length === 0) {
-    productGrid.innerHTML = '<p class="hidden-message">No bikes match the selected filters.</p>';
+    productGrid.innerHTML = '<p class="hidden-message">نتیجه‌ای برای این فیلتر پیدا نشد.</p>';
     return;
   }
 
   productGrid.innerHTML = filtered.map(productCard).join("");
 }
 
-function renderAccessories() {
+function renderOtherProducts() {
+  if (otherProducts.length === 0) {
+    accessoryGrid.innerHTML = '<p class="hidden-message">کالای دیگری ثبت نشده است.</p>';
+    return;
+  }
+
   const query = searchInput.value.trim().toLowerCase();
-  const filtered = accessories.filter((item) => !query || item.searchText.includes(query));
+  const filtered = otherProducts.filter((item) => !query || item.searchText.includes(query));
 
   if (filtered.length === 0) {
-    accessoryGrid.innerHTML = '<p class="hidden-message">No matching non-bike items found.</p>';
+    accessoryGrid.innerHTML = '<p class="hidden-message">نتیجه‌ای در سایر کالاها پیدا نشد.</p>';
     return;
   }
 
@@ -141,27 +103,31 @@ function renderAccessories() {
 }
 
 function productCard(item) {
+  const image = item.image || "";
+  const safeName = escapeHtml(item.name);
+  const safeDesc = escapeHtml(item.description);
+
   return `
     <article class="product-card">
       <div class="product-image">
-        <img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" loading="lazy" />
+        <img src="${escapeHtml(image)}" alt="${safeName}" loading="lazy" onerror="this.style.display='none'" />
         <span class="image-label">${escapeHtml(item.tag)}</span>
       </div>
       <div class="product-meta">
-        <span>${escapeHtml(categoryLabel(item))}</span>
-        <span>SKU: ${escapeHtml(item.sku.replace(".jpg", ""))}</span>
+        <span>${categoryLabel(item)}</span>
+        <span>کد: ${escapeHtml(item.sku.replace(".jpg", ""))}</span>
       </div>
-      <h3>${escapeHtml(item.name)}</h3>
-      <p>${escapeHtml(item.description)}</p>
+      <h3>${safeName}</h3>
+      <p>${safeDesc}</p>
       <div class="card-foot">
-        <span class="price">$${item.price.toLocaleString()}</span>
-        <button class="add-btn" data-id="${item.id}">Add to Cart</button>
+        <span class="price">${formatMoney(item.price)}</span>
+        <button class="add-btn" data-id="${item.id}">افزودن</button>
       </div>
     </article>
   `;
 }
 
-function handleAddButtonClick(event) {
+function handleAddClick(event) {
   const button = event.target.closest(".add-btn");
   if (!button) return;
   addToCart(button.dataset.id);
@@ -190,8 +156,8 @@ function addToCart(id) {
 
 function renderCart() {
   if (cart.length === 0) {
-    cartItems.innerHTML = '<p class="hidden-message">Your cart is empty.</p>';
-    cartTotal.textContent = "$0";
+    cartItems.innerHTML = '<p class="hidden-message">سبد خرید شما خالی است.</p>';
+    cartTotal.textContent = formatMoney(0);
     cartCount.textContent = "0";
     return;
   }
@@ -202,14 +168,14 @@ function renderCart() {
         <article class="cart-item">
           <div class="cart-item-head">
             <strong>${escapeHtml(item.name)}</strong>
-            <strong>$${(item.price * item.qty).toLocaleString()}</strong>
+            <strong>${formatMoney(item.price * item.qty)}</strong>
           </div>
-          <small>$${item.price.toLocaleString()} each</small>
+          <small>${formatMoney(item.price)} برای هر عدد</small>
           <div class="cart-item-controls">
-            <button class="qty-btn" data-action="decrease" data-id="${item.id}" aria-label="Decrease quantity">-</button>
+            <button class="qty-btn" data-action="decrease" data-id="${item.id}" aria-label="کاهش">-</button>
             <span>${item.qty}</span>
-            <button class="qty-btn" data-action="increase" data-id="${item.id}" aria-label="Increase quantity">+</button>
-            <button class="remove-btn" data-action="remove" data-id="${item.id}">Remove</button>
+            <button class="qty-btn" data-action="increase" data-id="${item.id}" aria-label="افزایش">+</button>
+            <button class="remove-btn" data-action="remove" data-id="${item.id}">حذف</button>
           </div>
         </article>
       `
@@ -227,17 +193,20 @@ function renderCart() {
 
   const totalQty = cart.reduce((sum, item) => sum + item.qty, 0);
   const totalPrice = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+
   cartCount.textContent = String(totalQty);
-  cartTotal.textContent = `$${totalPrice.toLocaleString()}`;
+  cartTotal.textContent = formatMoney(totalPrice);
 }
 
 function updateQty(id, delta) {
   const item = cart.find((entry) => entry.id === id);
   if (!item) return;
+
   item.qty += delta;
   if (item.qty <= 0) {
     cart = cart.filter((entry) => entry.id !== id);
   }
+
   persistCart();
   renderCart();
 }
@@ -270,13 +239,14 @@ function submitCheckout(event) {
   event.preventDefault();
 
   if (cart.length === 0) {
-    checkoutMessage.textContent = "Add at least one item to cart before submitting.";
+    checkoutMessage.textContent = "ابتدا یک محصول به سبد خرید اضافه کنید.";
     return;
   }
 
   const formData = new FormData(event.currentTarget);
-  const name = formData.get("name");
-  checkoutMessage.textContent = `Thanks ${name}, your order request was received. We'll contact you shortly.`;
+  const name = String(formData.get("name") || "").trim() || "مشتری عزیز";
+
+  checkoutMessage.textContent = `${name}، سفارش شما ثبت شد. به‌زودی تماس می‌گیریم.`;
   event.currentTarget.reset();
   clearCart();
   closeCart();
@@ -284,20 +254,22 @@ function submitCheckout(event) {
 
 function syncPriceRange() {
   if (bikes.length === 0) {
+    priceFilter.min = "0";
+    priceFilter.max = "0";
     priceFilter.value = "0";
-    priceValue.textContent = "$0";
+    priceValue.textContent = formatMoney(0);
     return;
   }
 
-  const values = bikes.map((item) => item.price);
-  const min = Math.max(100, Math.floor(Math.min(...values) / 50) * 50);
-  const max = Math.ceil(Math.max(...values) / 50) * 50;
+  const prices = bikes.map((item) => item.price);
+  const min = Math.floor(Math.min(...prices) / 100000) * 100000;
+  const max = Math.ceil(Math.max(...prices) / 100000) * 100000;
 
-  priceFilter.min = String(min);
-  priceFilter.max = String(max);
-  priceFilter.step = "50";
-  priceFilter.value = String(max);
-  priceValue.textContent = `$${max}`;
+  priceFilter.min = String(Math.max(0, min));
+  priceFilter.max = String(Math.max(100000, max));
+  priceFilter.step = "100000";
+  priceFilter.value = String(Math.max(100000, max));
+  priceValue.textContent = formatMoney(Number(priceFilter.value));
 }
 
 function reconcileCart() {
@@ -305,8 +277,8 @@ function reconcileCart() {
     .map((entry) => {
       const product = productIndex.get(entry.id);
       if (!product) return null;
-      const parsedQty = Number(entry.qty);
-      const qty = Number.isFinite(parsedQty) ? Math.max(1, parsedQty) : 1;
+
+      const qty = Math.max(1, Number(entry.qty) || 1);
       return {
         id: product.id,
         name: product.name,
@@ -334,122 +306,22 @@ function persistCart() {
   localStorage.setItem(cartKey, JSON.stringify(cart));
 }
 
-function detectItemType(title) {
-  if (title.includes("دوچرخه")) return "bicycle";
-  if (title.includes("اسکوتر")) return "scooter";
-  if (title.includes("موتور شارژی") || title.includes("موتور")) return "ride-on";
-  if (title.includes("اسکیت")) return "board";
-  return "other";
-}
-
-function detectBikeCategory(title, size) {
-  if (title.includes("تاشو")) return "folding";
-  if (
-    title.includes("کوهستان") ||
-    title.includes("آفرود") ||
-    title.includes("هیدرولیک") ||
-    title.includes("دنده") ||
-    (size && size >= 27)
-  ) {
-    return "mountain";
-  }
-  if ((size && size <= 20) || title.includes("دخترانه") || title.includes("پسرانه")) {
-    return "kids";
-  }
-  return "adult";
-}
-
-function estimatePrice(itemType, bikeCategory, size, seed) {
-  const variation = (seed % 7) * 35;
-
-  if (itemType === "bicycle") {
-    let base = 850;
-
-    if (size && size <= 16) base = 290;
-    else if (size && size <= 20) base = 460;
-    else if (size && size <= 24) base = 720;
-    else if (size && size <= 26) base = 980;
-    else if (size && size > 26) base = 1320;
-
-    if (bikeCategory === "mountain") base += 220;
-    if (bikeCategory === "folding") base += 140;
-
-    return roundPrice(base + variation);
-  }
-
-  if (itemType === "scooter") return roundPrice(210 + variation * 2);
-  if (itemType === "ride-on") return roundPrice(540 + variation * 2);
-  if (itemType === "board") return roundPrice(140 + variation);
-  return roundPrice(110 + variation);
-}
-
-function buildTag(itemType, bikeCategory, size) {
-  if (itemType === "bicycle") {
-    if (bikeCategory === "kids") return size ? `Kids • ${size}"` : "Kids Bicycle";
-    if (bikeCategory === "mountain") return size ? `Mountain • ${size}"` : "Mountain Bicycle";
-    if (bikeCategory === "folding") return "Folding Bicycle";
-    return size ? `Adult • ${size}"` : "Adult Bicycle";
-  }
-
-  if (itemType === "scooter") return "Scooter";
-  if (itemType === "ride-on") return "Ride-on";
-  if (itemType === "board") return "Skateboard";
-  return "Other Product";
-}
-
-function buildDescription(itemType, size) {
-  if (itemType === "bicycle") {
-    return size
-      ? `Catalog bicycle with wheel size ${size} inches from local inventory.`
-      : "Catalog bicycle from local inventory.";
-  }
-
-  if (itemType === "scooter") return "Catalog scooter from local inventory.";
-  if (itemType === "ride-on") return "Catalog ride-on motor product from local inventory.";
-  if (itemType === "board") return "Catalog skateboard from local inventory.";
-  return "Catalog non-bike product from local inventory.";
-}
-
 function categoryLabel(item) {
   if (item.itemType !== "bicycle") {
-    if (item.itemType === "ride-on") return "Ride-on";
-    return capitalize(item.itemType);
+    if (item.itemType === "scooter") return "اسکوتر";
+    if (item.itemType === "ride-on") return "موتور شارژی";
+    if (item.itemType === "board") return "اسکیت";
+    return "سایر";
   }
 
-  const labels = {
-    kids: "Kids Bike",
-    adult: "Adult Bike",
-    mountain: "Mountain Bike",
-    folding: "Folding Bike",
-  };
-
-  return labels[item.category] || "Bicycle";
+  if (item.category === "kids") return "دوچرخه کودک";
+  if (item.category === "mountain") return "دوچرخه کوهستان";
+  if (item.category === "folding") return "دوچرخه تاشو";
+  return "دوچرخه بزرگسال";
 }
 
-function parseSize(text) {
-  const sizeMatch = text.match(/سایز\s*([0-9]+(?:\.[0-9]+)?)/);
-  if (sizeMatch) return Number(sizeMatch[1]);
-
-  const fallbackMatch = text.match(/\b(12|16|20|24|26|27\.5|29)\b/);
-  if (fallbackMatch) return Number(fallbackMatch[1]);
-
-  return null;
-}
-
-function cleanTitle(value) {
-  return String(value)
-    .replace(/\(\s*پس کرایه\s*\)/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function extractNumber(fileName) {
-  const matched = String(fileName).match(/\d+/);
-  return matched ? Number(matched[0]) : 0;
-}
-
-function roundPrice(value) {
-  return Math.round(value / 10) * 10;
+function formatMoney(value) {
+  return `${Number(value || 0).toLocaleString("fa-IR")} تومان`;
 }
 
 function escapeHtml(value) {
@@ -459,9 +331,4 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
-}
-
-function capitalize(value) {
-  if (!value) return "";
-  return value.charAt(0).toUpperCase() + value.slice(1);
 }

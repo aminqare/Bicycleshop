@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>پنل مدیریت محصولات</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="admin.css" />
+  </head>
+  <body>
+    <header class="admin-header">
+      <div class="container admin-header-wrap">
+        <div>
+          <h1>پنل مدیریت فروشگاه</h1>
+          <p>مدیریت عنوان، قیمت، عکس و افزودن محصول جدید</p>
+        </div>
+        <a class="back-link" href="index.html">بازگشت به فروشگاه</a>
+      </div>
+    </header>
+
+    <main class="container admin-main">
+      <section class="panel">
+        <div class="toolbar">
+          <label>
+            جستجو در محصولات
+            <input id="searchInput" type="search" placeholder="عنوان یا کد محصول" />
+          </label>
+          <div class="toolbar-actions">
+            <button id="resetCatalog" class="btn btn-soft" type="button">بازگشت به داده اولیه</button>
+          </div>
+        </div>
+        <p id="stats" class="stats"></p>
+        <p id="statusMessage" class="status-message" aria-live="polite"></p>
+      </section>
+
+      <section class="panel">
+        <h2>افزودن محصول جدید</h2>
+        <form id="newProductForm" class="new-form">
+          <label>
+            عنوان محصول
+            <input name="name" type="text" required />
+          </label>
+          <label>
+            قیمت (تومان)
+            <input name="price" type="number" min="0" step="10000" required />
+          </label>
+          <label>
+            نوع محصول
+            <select name="itemType">
+              <option value="bicycle">دوچرخه</option>
+              <option value="scooter">اسکوتر</option>
+              <option value="ride-on">موتور شارژی</option>
+              <option value="board">اسکیت</option>
+              <option value="other">سایر</option>
+            </select>
+          </label>
+          <label>
+            دسته‌بندی دوچرخه
+            <select name="category">
+              <option value="adult">بزرگسال</option>
+              <option value="kids">کودک</option>
+              <option value="mountain">کوهستان</option>
+              <option value="folding">تاشو</option>
+              <option value="other">سایر</option>
+            </select>
+          </label>
+          <label class="full">
+            توضیح کوتاه
+            <input name="description" type="text" />
+          </label>
+          <label class="full">
+            آدرس عکس (مثال: downloaded_images/1.jpg)
+            <input name="image" type="text" />
+          </label>
+          <label class="full">
+            یا آپلود عکس جدید
+            <input name="imageFile" type="file" accept="image/*" />
+          </label>
+          <button class="btn btn-primary full" type="submit">افزودن محصول</button>
+        </form>
+      </section>
+
+      <section class="panel">
+        <h2>لیست محصولات</h2>
+        <div id="productList" class="product-list"></div>
+      </section>
+    </main>
+
+    <script src="catalog.js"></script>
+    <script src="admin.js"></script>
+  </body>
+</html>

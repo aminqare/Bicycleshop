@@ -1,13 +1,13 @@
 <!doctype html>
-<html lang="en">
+<html lang="fa" dir="rtl">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PedalPeak | Bicycle Shop</title>
+    <title>فروشگاه دوچرخه پدال</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="styles.css" />
@@ -16,48 +16,39 @@
     <header class="site-header">
       <div class="container nav-wrap">
         <a class="brand" href="#">
-          <span class="brand-mark">PP</span>
-          <span class="brand-text">PedalPeak</span>
+          <span class="brand-mark">پ</span>
+          <span class="brand-text">دوچرخه پدال</span>
         </a>
 
-        <nav class="site-nav" aria-label="Primary">
-          <a href="#products">Bikes</a>
-          <a href="#accessories">Accessories</a>
-          <a href="#about">About</a>
-          <a href="#contact">Contact</a>
+        <nav class="site-nav" aria-label="منوی اصلی">
+          <a href="#products">محصولات</a>
+          <a href="#other-products">سایر کالاها</a>
+          <a href="#checkout">ثبت سفارش</a>
+          <a href="admin.html">مدیریت</a>
         </nav>
 
-        <button id="cartButton" class="cart-button" aria-label="Open cart">
-          Cart
+        <button id="cartButton" class="cart-button" aria-label="سبد خرید">
+          سبد خرید
           <span id="cartCount" class="cart-count">0</span>
         </button>
       </div>
     </header>
 
     <main>
-      <section class="hero">
-        <div class="container hero-grid">
-          <div class="hero-content">
-            <p class="kicker">Urban • Mountain • Road</p>
-            <h1>Ride Better With Your Next Favorite Bicycle</h1>
-            <p>
-              Premium bikes, safety gear, and pro-level service for every kind of rider.
-              Build your setup with confidence.
+      <section class="hero section">
+        <div class="container hero-wrap">
+          <div>
+            <p class="kicker">فروش آنلاین دوچرخه و تجهیزات</p>
+            <h1>خرید راحت، مقایسه سریع، ارسال مطمئن</h1>
+            <p class="hero-text">
+              مدل‌های متنوع دوچرخه با عکس واقعی محصولات. با چند کلیک محصول را به سبد
+              اضافه کنید و سفارش خود را ثبت کنید.
             </p>
-            <div class="hero-cta">
-              <a href="#products" class="btn btn-primary">Shop Bikes</a>
-              <a href="#about" class="btn btn-secondary">Why PedalPeak</a>
-            </div>
-            <ul class="hero-highlights" role="list">
-              <li>Free setup on all complete bikes</li>
-              <li>48-hour delivery in major cities</li>
-              <li>14-day return policy</li>
-            </ul>
+            <a href="#products" class="btn btn-primary">مشاهده محصولات</a>
           </div>
-          <div class="hero-card">
-            <h2>Spring Sale</h2>
-            <p>Save up to 20% on selected mountain and hybrid bikes.</p>
-            <p class="hero-card-note">Offer ends this week.</p>
+          <div class="hero-note">
+            <p>مدیریت کامل محصولات از پنل ادمین</p>
+            <p>ویرایش عکس، عنوان، قیمت و افزودن کالا</p>
           </div>
         </div>
       </section>
@@ -65,31 +56,31 @@
       <section id="products" class="section">
         <div class="container">
           <div class="section-head">
-            <h2>Shop Bicycles</h2>
-            <p>Choose a bike that matches your terrain, pace, and style.</p>
+            <h2>دوچرخه‌ها</h2>
+            <p>فیلتر کنید و سریع پیدا کنید</p>
           </div>
 
           <div class="controls">
             <label>
-              Category
+              دسته‌بندی
               <select id="categoryFilter">
-                <option value="all">All</option>
-                <option value="kids">Kids</option>
-                <option value="adult">Adult</option>
-                <option value="mountain">Mountain / Off-road</option>
-                <option value="folding">Folding</option>
+                <option value="all">همه</option>
+                <option value="kids">کودک</option>
+                <option value="adult">بزرگسال</option>
+                <option value="mountain">کوهستان / آفرود</option>
+                <option value="folding">تاشو</option>
               </select>
             </label>
 
             <label>
-              Max Price ($)
-              <input id="priceFilter" type="range" min="250" max="3000" step="50" value="3000" />
-              <span id="priceValue" class="price-value">$3000</span>
+              سقف قیمت
+              <input id="priceFilter" type="range" min="0" max="100" step="100" value="100" />
+              <span id="priceValue" class="price-value">0 تومان</span>
             </label>
 
             <label>
-              Search
-              <input id="searchInput" type="search" placeholder="Search bikes and accessories" />
+              جستجو
+              <input id="searchInput" type="search" placeholder="جستجو در عنوان محصول" />
             </label>
           </div>
 
@@ -97,60 +88,37 @@
         </div>
       </section>
 
-      <section id="accessories" class="section section-soft">
+      <section id="other-products" class="section section-soft">
         <div class="container">
           <div class="section-head">
-            <h2>Accessories</h2>
-            <p>Complete your setup with helmets, lights, pumps, and more.</p>
+            <h2>سایر کالاها</h2>
+            <p>اسکوتر، موتور شارژی و موارد دیگر</p>
           </div>
-          <div id="accessoryGrid" class="product-grid accessory-grid" aria-live="polite"></div>
+          <div id="accessoryGrid" class="product-grid" aria-live="polite"></div>
         </div>
       </section>
 
-      <section id="about" class="section">
-        <div class="container about-grid">
-          <div>
-            <h2>Built by Riders</h2>
-            <p>
-              We are a bicycle-first shop focused on honest recommendations, reliable parts,
-              and fast support. Whether you are commuting daily or training long-distance,
-              we help you pick the right kit.
-            </p>
-          </div>
-          <ul class="about-list" role="list">
-            <li>Tune-up & maintenance packages</li>
-            <li>Bike fitting and setup guidance</li>
-            <li>Warranty and service support</li>
-            <li>Online order + in-store pickup</li>
-          </ul>
-        </div>
-      </section>
-
-      <section id="contact" class="section section-soft">
+      <section id="checkout" class="section">
         <div class="container">
           <div class="section-head">
-            <h2>Checkout</h2>
-            <p>Ready to place your order? Submit your details and we’ll confirm quickly.</p>
+            <h2>ثبت سفارش</h2>
+            <p>پس از ثبت، با شما تماس می‌گیریم</p>
           </div>
 
           <form id="checkoutForm" class="checkout-form">
             <label>
-              Full Name
+              نام و نام خانوادگی
               <input type="text" name="name" required />
             </label>
             <label>
-              Email
-              <input type="email" name="email" required />
-            </label>
-            <label>
-              Phone
+              شماره موبایل
               <input type="tel" name="phone" required />
             </label>
             <label>
-              Address
+              آدرس
               <textarea name="address" rows="3" required></textarea>
             </label>
-            <button type="submit" class="btn btn-primary">Submit Order Request</button>
+            <button type="submit" class="btn btn-primary">ارسال درخواست سفارش</button>
             <p id="checkoutMessage" class="checkout-message" aria-live="polite"></p>
           </form>
         </div>
@@ -159,16 +127,16 @@
 
     <aside id="cartDrawer" class="cart-drawer" aria-hidden="true">
       <div class="cart-header">
-        <h3>Your Cart</h3>
-        <button id="closeCart" class="close-cart" aria-label="Close cart">×</button>
+        <h3>سبد خرید</h3>
+        <button id="closeCart" class="close-cart" aria-label="بستن">×</button>
       </div>
       <div id="cartItems" class="cart-items"></div>
       <div class="cart-footer">
         <p>
-          Total
-          <strong id="cartTotal">$0</strong>
+          مجموع
+          <strong id="cartTotal">0 تومان</strong>
         </p>
-        <button id="clearCart" class="btn btn-secondary">Clear Cart</button>
+        <button id="clearCart" class="btn btn-secondary">خالی کردن</button>
       </div>
     </aside>
 
@@ -176,11 +144,12 @@
 
     <footer class="site-footer">
       <div class="container footer-grid">
-        <p>© <span id="year"></span> PedalPeak Bicycle Shop</p>
-        <p>support@pedalpeak.shop • +1 (555) 014-7722</p>
+        <p>© <span id="year"></span> فروشگاه دوچرخه پدال</p>
+        <p>پشتیبانی: 0912-000-0000</p>
       </div>
     </footer>
 
+    <script src="catalog.js"></script>
     <script src="app.js"></script>
   </body>
 </html>
