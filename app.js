@@ -1,118 +1,8 @@
-const bikes = [
-  {
-    id: "b1",
-    name: "Falcon Road 700",
-    category: "road",
-    price: 1450,
-    tag: "Fast / Lightweight",
-    description: "Carbon fork, 20-speed drivetrain, and responsive geometry.",
-    color: "linear-gradient(135deg, #0f9d58, #2cc16f)",
-  },
-  {
-    id: "b2",
-    name: "TrailCore X29",
-    category: "mountain",
-    price: 1890,
-    tag: "Trail / Full Control",
-    description: "Hydraulic brakes and lockout suspension for rough routes.",
-    color: "linear-gradient(135deg, #0d5c89, #1f8ac7)",
-  },
-  {
-    id: "b3",
-    name: "CityFlow Hybrid",
-    category: "city",
-    price: 820,
-    tag: "Urban / Comfort",
-    description: "Comfort saddle, upright posture, and puncture-resistant tires.",
-    color: "linear-gradient(135deg, #495057, #6c757d)",
-  },
-  {
-    id: "b4",
-    name: "MiniRider 24",
-    category: "kids",
-    price: 410,
-    tag: "Kids / Safe Ride",
-    description: "Light aluminum frame with confidence-friendly handling.",
-    color: "linear-gradient(135deg, #ee8f00, #f5b744)",
-  },
-  {
-    id: "b5",
-    name: "Altitude Pro 27.5",
-    category: "mountain",
-    price: 2360,
-    tag: "Adventure / Premium",
-    description: "Tubeless-ready wheels and dropper post for steep descents.",
-    color: "linear-gradient(135deg, #7b1fa2, #a53fd8)",
-  },
-  {
-    id: "b6",
-    name: "Velocity Aero 900",
-    category: "road",
-    price: 2760,
-    tag: "Race / Endurance",
-    description: "Race-tuned frame and deep-section wheels for high speed.",
-    color: "linear-gradient(135deg, #c62828, #f05454)",
-  },
-  {
-    id: "b7",
-    name: "MetroFold Lite",
-    category: "city",
-    price: 690,
-    tag: "Compact / Commuter",
-    description: "Quick-fold frame ideal for apartment and office storage.",
-    color: "linear-gradient(135deg, #1f2a44, #4a5b88)",
-  },
-  {
-    id: "b8",
-    name: "Rookie Trail 20",
-    category: "kids",
-    price: 330,
-    tag: "Beginner / Durable",
-    description: "Stable wheelbase and chain guard for safe daily rides.",
-    color: "linear-gradient(135deg, #00695c, #00a087)",
-  },
-];
-
-const accessories = [
-  {
-    id: "a1",
-    name: "Aero Helmet",
-    category: "gear",
-    price: 120,
-    tag: "Safety",
-    description: "Lightweight helmet with multi-point ventilation.",
-    color: "linear-gradient(135deg, #ff6f00, #ff9f40)",
-  },
-  {
-    id: "a2",
-    name: "Lumen Pro Light Set",
-    category: "gear",
-    price: 65,
-    tag: "Visibility",
-    description: "USB rechargeable front and rear smart lights.",
-    color: "linear-gradient(135deg, #2e7d32, #43a047)",
-  },
-  {
-    id: "a3",
-    name: "Floor Pump XL",
-    category: "tool",
-    price: 48,
-    tag: "Workshop",
-    description: "High-pressure steel floor pump with pressure gauge.",
-    color: "linear-gradient(135deg, #37474f, #607d8b)",
-  },
-  {
-    id: "a4",
-    name: "Commuter Rack Bag",
-    category: "bag",
-    price: 74,
-    tag: "Storage",
-    description: "Water-resistant rear rack bag with side pockets.",
-    color: "linear-gradient(135deg, #6d4c41, #8d6e63)",
-  },
-];
-
 const cartKey = "pedalpeak-cart-v1";
+
+let bikes = [];
+let accessories = [];
+let productIndex = new Map();
 let cart = loadCart();
 
 const categoryFilter = document.getElementById("categoryFilter");
@@ -135,21 +25,88 @@ document.getElementById("closeCart").addEventListener("click", closeCart);
 document.getElementById("clearCart").addEventListener("click", clearCart);
 overlay.addEventListener("click", closeCart);
 
-categoryFilter.addEventListener("change", renderBikes);
+categoryFilter.addEventListener("change", renderCatalog);
 priceFilter.addEventListener("input", () => {
   priceValue.textContent = `$${priceFilter.value}`;
-  renderBikes();
+  renderCatalog();
 });
-searchInput.addEventListener("input", renderBikes);
+searchInput.addEventListener("input", renderCatalog);
+
+productGrid.addEventListener("click", handleAddButtonClick);
+accessoryGrid.addEventListener("click", handleAddButtonClick);
 
 checkoutForm.addEventListener("submit", submitCheckout);
 
 year.textContent = String(new Date().getFullYear());
-priceValue.textContent = `$${priceFilter.value}`;
-
-renderBikes();
-renderAccessories();
 renderCart();
+bootstrap();
+
+async function bootstrap() {
+  productGrid.innerHTML = '<p class="hidden-message">Loading bikes...</p>';
+  accessoryGrid.innerHTML = '<p class="hidden-message">Loading products...</p>';
+
+  try {
+    const catalog = await loadCatalog();
+    bikes = catalog.bikes;
+    accessories = catalog.accessories;
+    productIndex = new Map(catalog.all.map((item) => [item.id, item]));
+
+    syncPriceRange();
+    reconcileCart();
+    renderCatalog();
+    renderCart();
+  } catch (error) {
+    const message =
+      "Could not load product data. Make sure product_data.json is available and run with a local server.";
+    productGrid.innerHTML = `<p class="hidden-message">${message}</p>`;
+    accessoryGrid.innerHTML = "";
+    console.error(error);
+  }
+}
+
+async function loadCatalog() {
+  const response = await fetch("product_data.json", { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`Failed to load product_data.json (${response.status})`);
+  }
+
+  const rawData = await response.json();
+  const entries = Object.entries(rawData).sort(
+    ([fileA], [fileB]) => extractNumber(fileA) - extractNumber(fileB)
+  );
+
+  const all = entries.map(([fileName, title], index) => {
+    const seed = extractNumber(fileName) || index + 1;
+    const normalizedTitle = cleanTitle(title);
+    const size = parseSize(normalizedTitle);
+    const itemType = detectItemType(normalizedTitle);
+    const bikeCategory = itemType === "bicycle" ? detectBikeCategory(normalizedTitle, size) : null;
+
+    return {
+      id: `p-${seed}`,
+      sku: fileName,
+      name: normalizedTitle,
+      description: buildDescription(itemType, size),
+      itemType,
+      category: bikeCategory,
+      tag: buildTag(itemType, bikeCategory, size),
+      image: `downloaded_images/${fileName}`,
+      price: estimatePrice(itemType, bikeCategory, size, seed),
+      searchText: normalizedTitle.toLowerCase(),
+    };
+  });
+
+  return {
+    all,
+    bikes: all.filter((item) => item.itemType === "bicycle"),
+    accessories: all.filter((item) => item.itemType !== "bicycle"),
+  };
+}
+
+function renderCatalog() {
+  renderBikes();
+  renderAccessories();
+}
 
 function renderBikes() {
   const category = categoryFilter.value;
@@ -159,8 +116,7 @@ function renderBikes() {
   const filtered = bikes.filter((item) => {
     const byCategory = category === "all" || item.category === category;
     const byPrice = item.price <= maxPrice;
-    const bySearch =
-      item.name.toLowerCase().includes(query) || item.description.toLowerCase().includes(query);
+    const bySearch = !query || item.searchText.includes(query);
     return byCategory && byPrice && bySearch;
   });
 
@@ -170,21 +126,30 @@ function renderBikes() {
   }
 
   productGrid.innerHTML = filtered.map(productCard).join("");
-  bindAddButtons();
 }
 
 function renderAccessories() {
-  accessoryGrid.innerHTML = accessories.map(productCard).join("");
-  bindAddButtons();
+  const query = searchInput.value.trim().toLowerCase();
+  const filtered = accessories.filter((item) => !query || item.searchText.includes(query));
+
+  if (filtered.length === 0) {
+    accessoryGrid.innerHTML = '<p class="hidden-message">No matching non-bike items found.</p>';
+    return;
+  }
+
+  accessoryGrid.innerHTML = filtered.map(productCard).join("");
 }
 
 function productCard(item) {
   return `
     <article class="product-card">
-      <div class="product-image" style="background:${item.color}">${escapeHtml(item.tag)}</div>
+      <div class="product-image">
+        <img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" loading="lazy" />
+        <span class="image-label">${escapeHtml(item.tag)}</span>
+      </div>
       <div class="product-meta">
-        <span>${capitalize(item.category)}</span>
-        <span>SKU: ${escapeHtml(item.id.toUpperCase())}</span>
+        <span>${escapeHtml(categoryLabel(item))}</span>
+        <span>SKU: ${escapeHtml(item.sku.replace(".jpg", ""))}</span>
       </div>
       <h3>${escapeHtml(item.name)}</h3>
       <p>${escapeHtml(item.description)}</p>
@@ -196,15 +161,14 @@ function productCard(item) {
   `;
 }
 
-function bindAddButtons() {
-  document.querySelectorAll(".add-btn").forEach((button) => {
-    button.addEventListener("click", () => addToCart(button.dataset.id));
-  });
+function handleAddButtonClick(event) {
+  const button = event.target.closest(".add-btn");
+  if (!button) return;
+  addToCart(button.dataset.id);
 }
 
 function addToCart(id) {
-  const all = [...bikes, ...accessories];
-  const product = all.find((item) => item.id === id);
+  const product = productIndex.get(id);
   if (!product) return;
 
   const existing = cart.find((item) => item.id === id);
@@ -318,6 +282,43 @@ function submitCheckout(event) {
   closeCart();
 }
 
+function syncPriceRange() {
+  if (bikes.length === 0) {
+    priceFilter.value = "0";
+    priceValue.textContent = "$0";
+    return;
+  }
+
+  const values = bikes.map((item) => item.price);
+  const min = Math.max(100, Math.floor(Math.min(...values) / 50) * 50);
+  const max = Math.ceil(Math.max(...values) / 50) * 50;
+
+  priceFilter.min = String(min);
+  priceFilter.max = String(max);
+  priceFilter.step = "50";
+  priceFilter.value = String(max);
+  priceValue.textContent = `$${max}`;
+}
+
+function reconcileCart() {
+  cart = cart
+    .map((entry) => {
+      const product = productIndex.get(entry.id);
+      if (!product) return null;
+      const parsedQty = Number(entry.qty);
+      const qty = Number.isFinite(parsedQty) ? Math.max(1, parsedQty) : 1;
+      return {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        qty,
+      };
+    })
+    .filter(Boolean);
+
+  persistCart();
+}
+
 function loadCart() {
   try {
     const raw = localStorage.getItem(cartKey);
@@ -331,6 +332,124 @@ function loadCart() {
 
 function persistCart() {
   localStorage.setItem(cartKey, JSON.stringify(cart));
+}
+
+function detectItemType(title) {
+  if (title.includes("دوچرخه")) return "bicycle";
+  if (title.includes("اسکوتر")) return "scooter";
+  if (title.includes("موتور شارژی") || title.includes("موتور")) return "ride-on";
+  if (title.includes("اسکیت")) return "board";
+  return "other";
+}
+
+function detectBikeCategory(title, size) {
+  if (title.includes("تاشو")) return "folding";
+  if (
+    title.includes("کوهستان") ||
+    title.includes("آفرود") ||
+    title.includes("هیدرولیک") ||
+    title.includes("دنده") ||
+    (size && size >= 27)
+  ) {
+    return "mountain";
+  }
+  if ((size && size <= 20) || title.includes("دخترانه") || title.includes("پسرانه")) {
+    return "kids";
+  }
+  return "adult";
+}
+
+function estimatePrice(itemType, bikeCategory, size, seed) {
+  const variation = (seed % 7) * 35;
+
+  if (itemType === "bicycle") {
+    let base = 850;
+
+    if (size && size <= 16) base = 290;
+    else if (size && size <= 20) base = 460;
+    else if (size && size <= 24) base = 720;
+    else if (size && size <= 26) base = 980;
+    else if (size && size > 26) base = 1320;
+
+    if (bikeCategory === "mountain") base += 220;
+    if (bikeCategory === "folding") base += 140;
+
+    return roundPrice(base + variation);
+  }
+
+  if (itemType === "scooter") return roundPrice(210 + variation * 2);
+  if (itemType === "ride-on") return roundPrice(540 + variation * 2);
+  if (itemType === "board") return roundPrice(140 + variation);
+  return roundPrice(110 + variation);
+}
+
+function buildTag(itemType, bikeCategory, size) {
+  if (itemType === "bicycle") {
+    if (bikeCategory === "kids") return size ? `Kids • ${size}"` : "Kids Bicycle";
+    if (bikeCategory === "mountain") return size ? `Mountain • ${size}"` : "Mountain Bicycle";
+    if (bikeCategory === "folding") return "Folding Bicycle";
+    return size ? `Adult • ${size}"` : "Adult Bicycle";
+  }
+
+  if (itemType === "scooter") return "Scooter";
+  if (itemType === "ride-on") return "Ride-on";
+  if (itemType === "board") return "Skateboard";
+  return "Other Product";
+}
+
+function buildDescription(itemType, size) {
+  if (itemType === "bicycle") {
+    return size
+      ? `Catalog bicycle with wheel size ${size} inches from local inventory.`
+      : "Catalog bicycle from local inventory.";
+  }
+
+  if (itemType === "scooter") return "Catalog scooter from local inventory.";
+  if (itemType === "ride-on") return "Catalog ride-on motor product from local inventory.";
+  if (itemType === "board") return "Catalog skateboard from local inventory.";
+  return "Catalog non-bike product from local inventory.";
+}
+
+function categoryLabel(item) {
+  if (item.itemType !== "bicycle") {
+    if (item.itemType === "ride-on") return "Ride-on";
+    return capitalize(item.itemType);
+  }
+
+  const labels = {
+    kids: "Kids Bike",
+    adult: "Adult Bike",
+    mountain: "Mountain Bike",
+    folding: "Folding Bike",
+  };
+
+  return labels[item.category] || "Bicycle";
+}
+
+function parseSize(text) {
+  const sizeMatch = text.match(/سایز\s*([0-9]+(?:\.[0-9]+)?)/);
+  if (sizeMatch) return Number(sizeMatch[1]);
+
+  const fallbackMatch = text.match(/\b(12|16|20|24|26|27\.5|29)\b/);
+  if (fallbackMatch) return Number(fallbackMatch[1]);
+
+  return null;
+}
+
+function cleanTitle(value) {
+  return String(value)
+    .replace(/\(\s*پس کرایه\s*\)/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function extractNumber(fileName) {
+  const matched = String(fileName).match(/\d+/);
+  return matched ? Number(matched[0]) : 0;
+}
+
+function roundPrice(value) {
+  return Math.round(value / 10) * 10;
 }
 
 function escapeHtml(value) {
